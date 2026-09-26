@@ -1,27 +1,49 @@
 import React from 'react';
 import StatusBadge from '../common/StatusBadge';
+import { ArrowDownToLine, ArrowUpFromLine, ArrowRightLeft, SlidersHorizontal } from 'lucide-react';
 
 const activities = [
-  { id: 1, type: 'Receipt', description: 'Received 50 units of SKU-1001', time: '2 hours ago', status: 'Done' },
-  { id: 2, type: 'Delivery', description: 'Packed Order #4920 for shipping', time: '4 hours ago', status: 'Ready' },
-  { id: 3, type: 'Transfer', description: 'Moved 20 units to WH-South', time: '1 day ago', status: 'Done' },
-  { id: 4, type: 'Adjustment', description: 'Inventory count updated for SKU-2005', time: '2 days ago', status: 'Draft' },
+  { id: 1, type: 'Receipt', docId: 'REC-009', description: 'Received 500 KG of Steel Rods', time: '2 hours ago', status: 'Done' },
+  { id: 2, type: 'Delivery', docId: 'DEL-014', description: 'Packed Order for ABC Steel', time: '4 hours ago', status: 'Ready' },
+  { id: 3, type: 'Transfer', docId: 'TRF-003', description: 'Moved 20 items to Floor', time: '1 day ago', status: 'Waiting' },
+  { id: 4, type: 'Adjustment', docId: 'ADJ-002', description: 'Count updated for Aluminum', time: '2 days ago', status: 'Done' },
 ];
+
+const getIcon = (type) => {
+  switch (type) {
+    case 'Receipt': return <ArrowDownToLine className="w-4 h-4 text-emerald-600" />;
+    case 'Delivery': return <ArrowUpFromLine className="w-4 h-4 text-indigo-600" />;
+    case 'Transfer': return <ArrowRightLeft className="w-4 h-4 text-blue-600" />;
+    case 'Adjustment': return <SlidersHorizontal className="w-4 h-4 text-amber-600" />;
+    default: return null;
+  }
+};
 
 const ActivityFeed = () => {
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 h-full">
-      <h2 className="text-lg font-semibold mb-5 text-gray-800">Recent Activity</h2>
-      <div className="space-y-4">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 h-full flex flex-col">
+      <div className="flex justify-between items-center mb-5">
+        <h2 className="text-base font-semibold text-gray-900">Recent Operations</h2>
+        <button className="text-sm text-indigo-600 hover:text-indigo-700 font-medium transition-colors">View all</button>
+      </div>
+      <div className="space-y-4 flex-1 overflow-y-auto pr-2 scrollbar-thin">
         {activities.map((activity) => (
-          <div key={activity.id} className="flex flex-col border-b border-gray-100 pb-4 last:border-0 last:pb-0">
-            <div className="flex justify-between items-start mb-2">
-              <span className="font-semibold text-gray-800 text-sm">{activity.type}</span>
-              <span className="text-xs text-gray-400 font-medium">{activity.time}</span>
+          <div key={activity.id} className="flex gap-4 group cursor-pointer">
+            <div className="mt-1 flex-shrink-0 w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center border border-gray-100 group-hover:bg-indigo-50 transition-colors">
+              {getIcon(activity.type)}
             </div>
-            <p className="text-sm text-gray-600 mb-2">{activity.description}</p>
-            <div className="flex">
-              <StatusBadge status={activity.status} />
+            <div className="flex-1 flex flex-col border-b border-gray-50 pb-4 last:border-0 last:pb-0">
+              <div className="flex justify-between items-start mb-1">
+                <div>
+                  <span className="font-semibold text-gray-900 text-sm mr-2 group-hover:text-indigo-600 transition-colors">{activity.docId}</span>
+                  <span className="text-xs text-gray-500 font-medium hidden sm:inline">{activity.type}</span>
+                </div>
+                <span className="text-xs text-gray-400 font-medium whitespace-nowrap">{activity.time}</span>
+              </div>
+              <p className="text-sm text-gray-600 mb-2.5 leading-relaxed">{activity.description}</p>
+              <div className="flex">
+                <StatusBadge status={activity.status} />
+              </div>
             </div>
           </div>
         ))}
