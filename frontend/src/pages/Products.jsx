@@ -1,85 +1,61 @@
 import React, { useState } from 'react';
 import ProductTable from '../components/products/ProductTable';
-import ProductForm from '../components/products/ProductForm';
+import FilterBar from '../components/dashboard/FilterBar';
 import Modal from '../components/common/Modal';
+import ProductForm from '../components/products/ProductForm';
+import { Plus } from 'lucide-react';
 
 const mockProducts = [
-  { id: 1, sku: 'SKU-1001', name: 'Wireless Mouse', category: 'Electronics', price: '29.99', stock: 150 },
-  { id: 2, sku: 'SKU-1002', name: 'Mechanical Keyboard', category: 'Electronics', price: '89.99', stock: 45 },
-  { id: 3, sku: 'SKU-2001', name: 'Office Chair', category: 'Furniture', price: '199.99', stock: 12 },
+  { id: 'PRD-001', name: 'Steel Rods', sku: 'SR001', category: 'Raw Materials', unit: 'KG', stock: 500, locations: 2, reorderLevel: 50, status: 'In Stock' },
+  { id: 'PRD-002', name: 'Aluminum Sheets', sku: 'AS005', category: 'Raw Materials', unit: 'PCS', stock: 0, locations: 0, reorderLevel: 20, status: 'Out of Stock' },
+  { id: 'PRD-003', name: 'Office Chairs', sku: 'CH001', category: 'Furniture', unit: 'PCS', stock: 15, locations: 1, reorderLevel: 20, status: 'Low Stock' },
 ];
 
 const Products = () => {
   const [products, setProducts] = useState(mockProducts);
-  const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState(null);
 
-  const filteredProducts = products.filter(p => 
-    p.sku.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    p.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const handleAddProduct = () => {
-    setEditingProduct(null);
-    setIsModalOpen(true);
-  };
-
-  const handleEditProduct = (product) => {
-    setEditingProduct(product);
-    setIsModalOpen(true);
-  };
-
-  const handleDeleteProduct = (id) => {
-    if(window.confirm('Are you sure you want to delete this product?')) {
-      setProducts(products.filter(p => p.id !== id));
-    }
-  };
-
-  const handleSubmit = (formData) => {
-    if (editingProduct) {
-      setProducts(products.map(p => p.id === editingProduct.id ? { ...formData, id: p.id } : p));
-    } else {
-      setProducts([...products, { ...formData, id: Date.now() }]);
-    }
+  const handleCreateProduct = (data) => {
+    const newProduct = {
+      id: `PRD-00${products.length + 1}`,
+      name: data.name,
+      sku: data.sku,
+      category: data.category,
+      unit: data.unit,
+      stock: data.initialStock,
+      locations: 1,
+      reorderLevel: data.reorderLevel,
+      status: data.initialStock > 0 ? 'In Stock' : 'Out of Stock',
+    };
+    setProducts([...products, newProduct]);
     setIsModalOpen(false);
   };
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Products</h1>
-        <button onClick={handleAddProduct} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 shadow">
-          + Add Product
+    <div className="space-y-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Products</h1>
+          <p className="text-sm text-gray-500 mt-1">Manage your inventory items and SKUs.</p>
+        </div>
+        <button 
+          onClick={() => setIsModalOpen(true)}
+          className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm flex items-center"
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          Add Product
         </button>
       </div>
 
-      <div className="mb-6 flex gap-4">
-        <input 
-          type="text" 
-          placeholder="Search by SKU or Name..." 
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full md:w-1/3 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none shadow-sm"
-        />
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="p-4 border-b border-gray-100 bg-gray-50/50">
+          <FilterBar />
+        </div>
+        <ProductTable products={products} />
       </div>
 
-      <ProductTable 
-        products={filteredProducts} 
-        onEdit={handleEditProduct} 
-        onDelete={handleDeleteProduct} 
-      />
-
-      <Modal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
-        title={editingProduct ? 'Edit Product' : 'Add New Product'}
-      >
-        <ProductForm 
-          initialData={editingProduct} 
-          onSubmit={handleSubmit} 
-          onCancel={() => setIsModalOpen(false)} 
-        />
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Add New Product">
+        <ProductForm onSubmit={handleCreateProduct} onCancel={() => setIsModalOpen(false)} />
       </Modal>
     </div>
   );
