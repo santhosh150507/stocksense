@@ -9,8 +9,38 @@ import toast from 'react-hot-toast';
 
 const Products = () => {
   const [products, setProducts] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  // Compute filtered products based on search query and status dropdown
+  const filteredProducts = React.useMemo(() => {
+    return products.filter((product) => {
+      // 1. Match search query against name, sku, category
+      const q = searchQuery.toLowerCase();
+      const matchesSearch = !q || (
+        (product.name && product.name.toLowerCase().includes(q)) ||
+        (product.sku && product.sku.toLowerCase().includes(q)) ||
+        (product.category_name && product.category_name.toLowerCase().includes(q))
+      );
+
+      // 2. Match status filter
+      let matchesStatus = true;
+      if (statusFilter && statusFilter !== 'All Statuses') {
+        const stock = product.current_stock || 0;
+        const reorderPoint = product.reorder_point || 0;
+        
+        let status = 'In Stock';
+        if (stock <= 0) status = 'Out of Stock';
+        else if (stock <= reorderPoint) status = 'Low Stock';
+
+        matchesStatus = (status === statusFilter);
+      }
+
+      return matchesSearch && matchesStatus;
+    });
+  }, [products, searchQuery, statusFilter]);
 
   React.useEffect(() => {
     fetchProducts();
@@ -61,12 +91,18 @@ const Products = () => {
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="p-4 border-b border-gray-100 bg-gray-50/50">
-          <FilterBar />
+          <FilterBar 
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            statusFilter={statusFilter}
+            onStatusChange={setStatusFilter}
+            statusOptions={["In Stock", "Low Stock", "Out of Stock"]}
+          />
         </div>
         {loading ? (
           <div className="p-8 text-center text-gray-500">Loading products...</div>
         ) : (
-          <ProductTable products={products} />
+          <ProductTable products={filteredProducts} />
         )}
       </div>
 
