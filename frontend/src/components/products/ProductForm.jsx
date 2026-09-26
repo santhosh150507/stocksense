@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import CategoryPicker from './CategoryPicker';
+import LocationPicker from '../common/LocationPicker';
 
 const ProductForm = ({ onSubmit, onCancel }) => {
   const [formData, setFormData] = useState({
@@ -9,7 +10,7 @@ const ProductForm = ({ onSubmit, onCancel }) => {
     unit: 'PCS',
     initialStock: 0,
     reorderLevel: 0,
-    warehouse: 'Main Warehouse'
+    location_id: ''
   });
 
   const handleSubmit = (e) => {
@@ -46,11 +47,8 @@ const ProductForm = ({ onSubmit, onCancel }) => {
         </div>
         
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Warehouse Location</label>
-          <select value={formData.warehouse} onChange={e => setFormData({...formData, warehouse: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-            <option value="Main Warehouse">Main Warehouse</option>
-            <option value="Production Floor">Production Floor</option>
-          </select>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Initial Stock Location</label>
+          <LocationPicker value={formData.location_id} onChange={val => setFormData({...formData, location_id: val})} />
         </div>
 
         <div>

@@ -17,6 +17,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (credentials) => {
     const data = await authService.login(credentials);
+    console.log('NEW LOGIN - decoded role from response:', data.user.role);
     setUser(data.user);
     return data;
   };

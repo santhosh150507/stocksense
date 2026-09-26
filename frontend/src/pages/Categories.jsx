@@ -1,35 +1,54 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import FilterBar from '../components/dashboard/FilterBar';
 import Modal from '../components/common/Modal';
 import { Plus, Edit2, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
-
-const mockCategories = [
-  { id: 'CAT-001', name: 'Raw Materials', description: 'Metals, plastics, and base components', productsCount: 145, status: 'Active' },
-  { id: 'CAT-002', name: 'Furniture', description: 'Office and home furniture items', productsCount: 32, status: 'Active' },
-  { id: 'CAT-003', name: 'Hardware', description: 'Tools and equipment', productsCount: 89, status: 'Active' },
-  { id: 'CAT-004', name: 'Finished Goods', description: 'Ready to ship products', productsCount: 210, status: 'Active' },
-];
+import { categoryService } from '../services/categoryService';
 
 const Categories = () => {
-  const [categories, setCategories] = useState(mockCategories);
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({ name: '', description: '' });
+  const [searchQuery, setSearchQuery] = useState('');
 
-  const handleCreate = (e) => {
-    e.preventDefault();
-    const newCategory = {
-      id: `CAT-00${categories.length + 1}`,
-      name: formData.name,
-      description: formData.description,
-      productsCount: 0,
-      status: 'Active',
-    };
-    setCategories([...categories, newCategory]);
-    setIsModalOpen(false);
-    setFormData({ name: '', description: '' });
-    toast.success('Category created successfully');
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
+    try {
+      const data = await categoryService.getAll();
+      setCategories(data);
+    } catch (err) {
+      toast.error('Failed to fetch categories');
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const handleCreate = async (e) => {
+    e.preventDefault();
+    try {
+      await categoryService.create({
+        name: formData.name,
+        description: formData.description
+      });
+      setIsModalOpen(false);
+      setFormData({ name: '', description: '' });
+      toast.success('Category created successfully');
+      fetchCategories();
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to create category');
+    }
+  };
+
+  const filteredCategories = categories.filter(c => {
+    const matchesSearch = !searchQuery || 
+      (c.name?.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (c.description?.toLowerCase().includes(searchQuery.toLowerCase()));
+    return matchesSearch;
+  });
 
   return (
     <div className="space-y-6">
@@ -49,7 +68,11 @@ const Categories = () => {
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="p-4 border-b border-gray-100 bg-gray-50/50">
-          <FilterBar />
+          <FilterBar 
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            showStatusFilter={false}
+          />
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
@@ -63,7 +86,12 @@ const Categories = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-100">
-              {categories.map((cat) => (
+              {loading ? (
+                <tr><td colSpan="5" className="px-6 py-8 text-center text-sm text-gray-500">Loading categories...</td></tr>
+              ) : filteredCategories.length === 0 ? (
+                <tr><td colSpan="5" className="px-6 py-8 text-center text-sm text-gray-500 font-medium">No categories found.</td></tr>
+              ) : (
+                filteredCategories.map((cat) => (
                 <tr key={cat.id} className="hover:bg-gray-50/80 transition-colors group">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-semibold text-gray-900">{cat.name}</div>
@@ -73,12 +101,12 @@ const Categories = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-center">
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 border border-gray-200">
-                      {cat.productsCount}
+                      {cat.product_count || 0}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-center">
-                    <span className={`px-2.5 py-1 rounded-md text-xs font-medium border ${cat.status === 'Active' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-gray-50 text-gray-700 border-gray-100'}`}>
-                      {cat.status}
+                    <span className={`px-2.5 py-1 rounded-md text-xs font-medium border ${cat.status === 'Active' || !cat.status ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-gray-50 text-gray-700 border-gray-100'}`}>
+                      {cat.status || 'Active'}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -88,7 +116,8 @@ const Categories = () => {
                     </div>
                   </td>
                 </tr>
-              ))}
+                ))
+              )}
             </tbody>
           </table>
         </div>

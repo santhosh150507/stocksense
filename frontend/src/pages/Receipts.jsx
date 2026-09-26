@@ -3,20 +3,66 @@ import FilterBar from '../components/dashboard/FilterBar';
 import StatusBadge from '../components/common/StatusBadge';
 import { Plus, Eye, CheckCircle2, ChevronRight } from 'lucide-react';
 import toast from 'react-hot-toast';
-
-const mockReceipts = [
-  { id: 'REC-001', supplier: 'ABC Steel', warehouse: 'Main Warehouse', products: 2, totalQty: 150, date: '2026-09-20', status: 'Done' },
-  { id: 'REC-002', supplier: 'Global Metals', warehouse: 'Production Floor', products: 1, totalQty: 50, date: '2026-09-22', status: 'Draft' },
-  { id: 'REC-003', supplier: 'Office Supplies Inc', warehouse: 'Warehouse 2', products: 5, totalQty: 100, date: '2026-09-25', status: 'Waiting' },
-];
+import Modal from '../components/common/Modal';
+import ReceiptForm from '../components/operations/ReceiptForm';
+import { receiptService } from '../services/receiptService';
 
 const Receipts = () => {
-  const [receipts, setReceipts] = useState(mockReceipts);
+  const [receipts, setReceipts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
 
-  const handleValidate = (id) => {
-    setReceipts(receipts.map(r => r.id === id ? { ...r, status: 'Done' } : r));
-    toast.success('Receipt validated successfully');
+  React.useEffect(() => {
+    fetchReceipts();
+  }, []);
+
+  const fetchReceipts = async () => {
+    try {
+      const data = await receiptService.getAll();
+      setReceipts(data);
+    } catch (err) {
+      toast.error('Failed to load receipts');
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const handleValidate = async (id) => {
+    try {
+      await receiptService.validate(id);
+      toast.success('Receipt validated successfully');
+      fetchReceipts();
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to validate receipt');
+    }
+  };
+
+  const handleCreate = async (data) => {
+    try {
+      // Map the string inputs to IDs if the user types a number, defaulting to 1 for location if they didn't provide one
+      const lines = data.lines.map(l => ({
+        product_id: parseInt(l.product) || 1,
+        location_id: parseInt(l.location) || 1, 
+        quantity: parseInt(l.quantity)
+      }));
+      await receiptService.create({ supplier: data.supplier, lines });
+      toast.success('Receipt created successfully');
+      setIsModalOpen(false);
+      fetchReceipts();
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to create receipt');
+    }
+  };
+
+  const filteredReceipts = receipts.filter(r => {
+    const matchesSearch = !searchQuery || 
+      (r.receipt_number?.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (r.supplier_name?.toLowerCase().includes(searchQuery.toLowerCase()));
+    const matchesStatus = !statusFilter || statusFilter === 'All Statuses' || r.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
 
   return (
     <div className="space-y-6">
@@ -25,7 +71,10 @@ const Receipts = () => {
           <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Receipts</h1>
           <p className="text-sm text-gray-500 mt-1">Manage incoming goods from your suppliers.</p>
         </div>
-        <button className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm flex items-center">
+        <button 
+          onClick={() => setIsModalOpen(true)}
+          className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm flex items-center"
+        >
           <Plus className="w-4 h-4 mr-2" />
           Create Receipt
         </button>
@@ -33,7 +82,12 @@ const Receipts = () => {
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="p-4 border-b border-gray-100 bg-gray-50/50">
-          <FilterBar />
+          <FilterBar 
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            statusFilter={statusFilter}
+            onStatusChange={setStatusFilter}
+          />
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
@@ -50,16 +104,21 @@ const Receipts = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-100">
-              {receipts.map(r => (
+              {loading ? (
+                <tr><td colSpan="8" className="px-6 py-8 text-center text-sm text-gray-500">Loading receipts...</td></tr>
+              ) : filteredReceipts.length === 0 ? (
+                <tr><td colSpan="8" className="px-6 py-8 text-center text-sm text-gray-500 font-medium">No receipts found.</td></tr>
+              ) : (
+                filteredReceipts.map(r => (
                 <tr key={r.id} className="hover:bg-gray-50/80 transition-colors group">
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-semibold text-indigo-600 cursor-pointer hover:text-indigo-800">{r.id}</div>
+                    <div className="text-sm font-semibold text-indigo-600 cursor-pointer hover:text-indigo-800">{r.receipt_number || r.id}</div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{r.supplier}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{r.warehouse}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500">{r.products}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-gray-900">{r.totalQty}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{r.date}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{r.supplier_name || r.supplier}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{r.warehouse_name || r.warehouse}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500">{r.line_count || '-'}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-gray-900">{r.total_qty || r.totalQty || '-'}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(r.date || r.created_at).toLocaleDateString()}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-center">
                     <StatusBadge status={r.status} />
                   </td>
@@ -75,11 +134,16 @@ const Receipts = () => {
                     </div>
                   </td>
                 </tr>
-              ))}
+                ))
+              )}
             </tbody>
           </table>
         </div>
       </div>
+      
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Create Receipt">
+        <ReceiptForm onSubmit={handleCreate} onCancel={() => setIsModalOpen(false)} />
+      </Modal>
     </div>
   );
 };

@@ -12,6 +12,7 @@ const adjustmentRoutes = require('./routes/adjustmentRoutes');
 const ledgerRoutes = require('./routes/ledgerRoutes');
 const warehouseRoutes = require('./routes/warehouseRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
+const categoryRoutes = require('./routes/categoryRoutes');
 
 const app = express();
 
@@ -33,6 +34,7 @@ app.use('/api/adjustments', adjustmentRoutes);
 app.use('/api/ledger', ledgerRoutes);
 app.use('/api/warehouses', warehouseRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/categories', categoryRoutes);
 
 // Global Error Handler
 app.use(errorHandler);

@@ -3,26 +3,49 @@ import FilterBar from '../components/dashboard/FilterBar';
 import StatusBadge from '../components/common/StatusBadge';
 import { Plus, Eye, CheckCircle2, ChevronRight, Package, Truck } from 'lucide-react';
 import toast from 'react-hot-toast';
-
-const mockDeliveries = [
-  { id: 'DEL-001', customer: 'BuildCo Construction', warehouse: 'Main Warehouse', products: 3, totalQty: 250, date: '2026-09-21', status: 'Done' },
-  { id: 'DEL-002', customer: 'Retail Partners LLC', warehouse: 'Main Warehouse', products: 1, totalQty: 20, date: '2026-09-23', status: 'Waiting' },
-  { id: 'DEL-003', customer: 'Direct Client', warehouse: 'Warehouse 2', products: 2, totalQty: 5, date: '2026-09-26', status: 'Draft' },
-];
+import Modal from '../components/common/Modal';
+import DeliveryForm from '../components/operations/DeliveryForm';
+import { deliveryService } from '../services/deliveryService';
 
 const Deliveries = () => {
-  const [deliveries, setDeliveries] = useState(mockDeliveries);
+  const [deliveries, setDeliveries] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
 
-  const handleProgress = (id, currentStatus) => {
-    let nextStatus = currentStatus;
-    if (currentStatus === 'Draft') nextStatus = 'Waiting'; // Pick
-    else if (currentStatus === 'Waiting') nextStatus = 'Ready'; // Pack
-    else if (currentStatus === 'Ready') {
-      nextStatus = 'Done'; // Validate
-      toast.success('Delivery validated and stock deducted!');
+  React.useEffect(() => {
+    fetchDeliveries();
+  }, []);
+
+  const fetchDeliveries = async () => {
+    try {
+      const data = await deliveryService.getAll();
+      setDeliveries(data);
+    } catch (err) {
+      toast.error('Failed to load deliveries');
+    } finally {
+      setLoading(false);
     }
-    
-    setDeliveries(deliveries.map(d => d.id === id ? { ...d, status: nextStatus } : d));
+  };
+
+  const handleProgress = async (id, currentStatus) => {
+    try {
+      let nextStatus = currentStatus;
+      if (currentStatus === 'Draft') nextStatus = 'Waiting';
+      else if (currentStatus === 'Waiting') nextStatus = 'Ready';
+      
+      if (currentStatus === 'Ready') {
+        await deliveryService.validate(id);
+        toast.success('Delivery validated and stock deducted!');
+      } else {
+        await deliveryService.update(id, { status: nextStatus });
+        toast.success(`Status updated to ${nextStatus}`);
+      }
+      fetchDeliveries();
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to update delivery');
+    }
   };
 
   const getActionBtn = (status, id) => {
@@ -32,6 +55,30 @@ const Deliveries = () => {
     return null;
   };
 
+  const handleCreate = async (data) => {
+    try {
+      const lines = data.lines.map(l => ({
+        product_id: parseInt(l.product) || 1,
+        location_id: parseInt(l.location) || 1, 
+        quantity: parseInt(l.quantity)
+      }));
+      await deliveryService.create({ customer: data.customer, lines });
+      toast.success('Delivery order created successfully');
+      setIsModalOpen(false);
+      fetchDeliveries();
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to create delivery');
+    }
+  };
+
+  const filteredDeliveries = deliveries.filter(d => {
+    const matchesSearch = !searchQuery || 
+      (d.order_number?.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (d.customer_name?.toLowerCase().includes(searchQuery.toLowerCase()));
+    const matchesStatus = !statusFilter || statusFilter === 'All Statuses' || d.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -39,7 +86,10 @@ const Deliveries = () => {
           <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Delivery Orders</h1>
           <p className="text-sm text-gray-500 mt-1">Manage outgoing shipments to customers.</p>
         </div>
-        <button className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm flex items-center">
+        <button 
+          onClick={() => setIsModalOpen(true)}
+          className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm flex items-center"
+        >
           <Plus className="w-4 h-4 mr-2" />
           Create Delivery
         </button>
@@ -47,7 +97,12 @@ const Deliveries = () => {
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="p-4 border-b border-gray-100 bg-gray-50/50">
-          <FilterBar />
+          <FilterBar 
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            statusFilter={statusFilter}
+            onStatusChange={setStatusFilter}
+          />
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
@@ -64,16 +119,21 @@ const Deliveries = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-100">
-              {deliveries.map(d => (
+              {loading ? (
+                <tr><td colSpan="8" className="px-6 py-8 text-center text-sm text-gray-500">Loading deliveries...</td></tr>
+              ) : filteredDeliveries.length === 0 ? (
+                <tr><td colSpan="8" className="px-6 py-8 text-center text-sm text-gray-500 font-medium">No deliveries found.</td></tr>
+              ) : (
+                filteredDeliveries.map(d => (
                 <tr key={d.id} className="hover:bg-gray-50/80 transition-colors group">
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-semibold text-indigo-600 cursor-pointer hover:text-indigo-800">{d.id}</div>
+                    <div className="text-sm font-semibold text-indigo-600 cursor-pointer hover:text-indigo-800">{d.order_number || d.id}</div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{d.customer}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{d.warehouse}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500">{d.products}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-gray-900">{d.totalQty}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{d.date}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{d.customer_name || d.customer}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{d.warehouse_name || d.warehouse}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500">{d.line_count || '-'}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-gray-900">{d.total_qty || d.totalQty || '-'}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(d.date || d.created_at).toLocaleDateString()}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-center">
                     <StatusBadge status={d.status} />
                   </td>
@@ -85,11 +145,16 @@ const Deliveries = () => {
                     </div>
                   </td>
                 </tr>
-              ))}
+                ))
+              )}
             </tbody>
           </table>
         </div>
       </div>
+      
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Create Delivery Order">
+        <DeliveryForm onSubmit={handleCreate} onCancel={() => setIsModalOpen(false)} />
+      </Modal>
     </div>
   );
 };

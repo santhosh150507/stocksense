@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink, Link } from 'react-router-dom';
+import { NavLink, Link, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   Package, 
@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 
 const Sidebar = ({ onClose }) => {
+  const location = useLocation();
   const mainLinks = [
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/products', label: 'Products', icon: Package },
@@ -34,22 +35,23 @@ const Sidebar = ({ onClose }) => {
     { path: '/settings/categories', label: 'Categories', icon: Tags },
   ];
 
-  const NavItem = ({ to, label, icon: Icon }) => (
-    <NavLink
-      to={to}
-      onClick={onClose}
-      className={({ isActive }) =>
-        `flex items-center px-3 py-2.5 mt-1 rounded-lg transition-all duration-200 ease-in-out font-medium text-sm group ${
+  const NavItem = ({ to, label, icon: Icon }) => {
+    const isActive = location.pathname.startsWith(to);
+    return (
+      <NavLink
+        to={to}
+        onClick={onClose}
+        className={`flex items-center px-3 py-2.5 mt-1 rounded-lg transition-all duration-200 ease-in-out font-medium text-sm group ${
           isActive 
             ? 'bg-indigo-50 text-indigo-700' 
             : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-        }`
-      }
-    >
-      <Icon className={`w-5 h-5 mr-3 flex-shrink-0 transition-colors ${isActive ? 'text-indigo-600' : 'text-gray-400 group-hover:text-gray-600'}`} />
-      {label}
-    </NavLink>
-  );
+        }`}
+      >
+        <Icon className={`w-5 h-5 mr-3 flex-shrink-0 transition-colors ${isActive ? 'text-indigo-600' : 'text-gray-400 group-hover:text-gray-600'}`} />
+        {label}
+      </NavLink>
+    );
+  };
 
   return (
     <div className="h-full flex flex-col bg-white border-r border-gray-200 shadow-sm">
@@ -83,20 +85,23 @@ const Sidebar = ({ onClose }) => {
       </div>
 
       <div className="p-4 border-t border-gray-100 shrink-0 bg-gray-50/50">
-        <NavLink
-          to="/profile"
-          onClick={onClose}
-          className={({ isActive }) =>
-            `flex items-center px-3 py-2.5 rounded-lg transition-all duration-200 ease-in-out font-medium text-sm group ${
-              isActive 
-                ? 'bg-indigo-50 text-indigo-700' 
-                : 'text-gray-600 hover:bg-white hover:shadow-sm hover:text-gray-900 border border-transparent hover:border-gray-200'
-            }`
-          }
-        >
-          <Settings className={`w-5 h-5 mr-3 flex-shrink-0 transition-colors ${isActive ? 'text-indigo-600' : 'text-gray-400 group-hover:text-gray-600'}`} />
-          Profile & Settings
-        </NavLink>
+        {(() => {
+          const isActive = location.pathname.startsWith('/profile');
+          return (
+            <NavLink
+              to="/profile"
+              onClick={onClose}
+              className={`flex items-center px-3 py-2.5 rounded-lg transition-all duration-200 ease-in-out font-medium text-sm group ${
+                isActive 
+                  ? 'bg-indigo-50 text-indigo-700' 
+                  : 'text-gray-600 hover:bg-white hover:shadow-sm hover:text-gray-900 border border-transparent hover:border-gray-200'
+              }`}
+            >
+              <Settings className={`w-5 h-5 mr-3 flex-shrink-0 transition-colors ${isActive ? 'text-indigo-600' : 'text-gray-400 group-hover:text-gray-600'}`} />
+              Profile & Settings
+            </NavLink>
+          );
+        })()}
       </div>
     </div>
   );

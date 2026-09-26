@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
+import ProductPicker from '../common/ProductPicker';
+import LocationPicker from '../common/LocationPicker';
 
 const TransferForm = ({ onSubmit, onCancel }) => {
   const [fromWarehouse, setFromWarehouse] = useState('');
   const [toWarehouse, setToWarehouse] = useState('');
   const [lines, setLines] = useState([{ product: '', quantity: 1 }]);
-  
-  const warehouses = ['Main WH', 'Secondary WH', 'Store Front'];
 
   const handleAddLine = () => setLines([...lines, { product: '', quantity: 1 }]);
   const handleLineChange = (index, field, value) => {
@@ -26,25 +26,21 @@ const TransferForm = ({ onSubmit, onCancel }) => {
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="flex gap-4">
         <div className="flex-1">
-          <label className="block text-sm font-medium text-gray-700 mb-1">From Warehouse</label>
-          <select value={fromWarehouse} onChange={e => setFromWarehouse(e.target.value)} className="w-full p-2 border rounded" required>
-            <option value="">Select Origin</option>
-            {warehouses.map(wh => <option key={wh} value={wh}>{wh}</option>)}
-          </select>
+          <label className="block text-sm font-medium text-gray-700 mb-1">From Location</label>
+          <LocationPicker value={fromWarehouse} onChange={setFromWarehouse} className="w-full p-2 border rounded" />
         </div>
         <div className="flex-1">
-          <label className="block text-sm font-medium text-gray-700 mb-1">To Warehouse</label>
-          <select value={toWarehouse} onChange={e => setToWarehouse(e.target.value)} className="w-full p-2 border rounded" required>
-            <option value="">Select Destination</option>
-            {warehouses.map(wh => <option key={wh} value={wh}>{wh}</option>)}
-          </select>
+          <label className="block text-sm font-medium text-gray-700 mb-1">To Location</label>
+          <LocationPicker value={toWarehouse} onChange={setToWarehouse} className="w-full p-2 border rounded" />
         </div>
       </div>
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">Product Lines</label>
         {lines.map((line, idx) => (
           <div key={idx} className="flex gap-2 mb-2 items-center">
-            <input type="text" placeholder="Product SKU or Name" value={line.product} onChange={e => handleLineChange(idx, 'product', e.target.value)} className="flex-1 p-2 border rounded" required />
+            <div className="flex-1">
+              <ProductPicker value={line.product} onChange={val => handleLineChange(idx, 'product', val)} className="w-full p-2 border rounded" />
+            </div>
             <input type="number" min="1" value={line.quantity} onChange={e => handleLineChange(idx, 'quantity', Number(e.target.value))} className="w-24 p-2 border rounded" required />
             {lines.length > 1 && (
               <button type="button" onClick={() => handleRemoveLine(idx)} className="text-red-500 hover:text-red-700 font-bold px-2">X</button>

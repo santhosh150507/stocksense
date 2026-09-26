@@ -4,31 +4,43 @@ import FilterBar from '../components/dashboard/FilterBar';
 import Modal from '../components/common/Modal';
 import ProductForm from '../components/products/ProductForm';
 import { Plus } from 'lucide-react';
-
-const mockProducts = [
-  { id: 'PRD-001', name: 'Steel Rods', sku: 'SR001', category: 'Raw Materials', unit: 'KG', stock: 500, locations: 2, reorderLevel: 50, status: 'In Stock' },
-  { id: 'PRD-002', name: 'Aluminum Sheets', sku: 'AS005', category: 'Raw Materials', unit: 'PCS', stock: 0, locations: 0, reorderLevel: 20, status: 'Out of Stock' },
-  { id: 'PRD-003', name: 'Office Chairs', sku: 'CH001', category: 'Furniture', unit: 'PCS', stock: 15, locations: 1, reorderLevel: 20, status: 'Low Stock' },
-];
+import { productService } from '../services/productService';
+import toast from 'react-hot-toast';
 
 const Products = () => {
-  const [products, setProducts] = useState(mockProducts);
+  const [products, setProducts] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  const handleCreateProduct = (data) => {
-    const newProduct = {
-      id: `PRD-00${products.length + 1}`,
-      name: data.name,
-      sku: data.sku,
-      category: data.category,
-      unit: data.unit,
-      stock: data.initialStock,
-      locations: 1,
-      reorderLevel: data.reorderLevel,
-      status: data.initialStock > 0 ? 'In Stock' : 'Out of Stock',
-    };
-    setProducts([...products, newProduct]);
-    setIsModalOpen(false);
+  React.useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  const fetchProducts = async () => {
+    try {
+      const data = await productService.getAll();
+      setProducts(data);
+    } catch (err) {
+      toast.error('Failed to load products');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateProduct = async (data) => {
+    try {
+      await productService.create({
+        sku: data.sku,
+        name: data.name,
+        category_id: data.category_id,
+        reorder_point: data.reorderLevel,
+      });
+      toast.success('Product created successfully');
+      setIsModalOpen(false);
+      fetchProducts();
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to create product');
+    }
   };
 
   return (
@@ -51,7 +63,11 @@ const Products = () => {
         <div className="p-4 border-b border-gray-100 bg-gray-50/50">
           <FilterBar />
         </div>
-        <ProductTable products={products} />
+        {loading ? (
+          <div className="p-8 text-center text-gray-500">Loading products...</div>
+        ) : (
+          <ProductTable products={products} />
+        )}
       </div>
 
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Add New Product">

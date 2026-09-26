@@ -87,6 +87,47 @@ const dashboardController = {
       const pendingDeliveries = dRow.draft + dRow.waiting + dRow.ready;
       const pendingTransfers = tRow.draft + tRow.waiting + tRow.ready;
 
+      // 5. Stock movements over the last 7 days
+      const movementsRes = await db.query(`
+        SELECT 
+          TO_CHAR(DATE(created_at), 'Dy') as name,
+          DATE(created_at) as full_date,
+          SUM(CASE WHEN qty_delta > 0 THEN qty_delta ELSE 0 END)::INT as "In",
+          SUM(CASE WHEN qty_delta < 0 THEN ABS(qty_delta) ELSE 0 END)::INT as "Out"
+        FROM stock_ledger
+        WHERE created_at >= CURRENT_DATE - INTERVAL '6 days'
+        GROUP BY DATE(created_at), TO_CHAR(DATE(created_at), 'Dy')
+        ORDER BY DATE(created_at) ASC;
+      `);
+
+      const days = [];
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const name = d.toLocaleDateString('en-US', { weekday: 'short' });
+        // Format as YYYY-MM-DD local
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        days.push({ name, dateStr: `${yyyy}-${mm}-${dd}`, In: 0, Out: 0 });
+      }
+
+      movementsRes.rows.forEach(row => {
+        // row.full_date is a JS Date object
+        const d = new Date(row.full_date);
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        const dStr = `${yyyy}-${mm}-${dd}`;
+        
+        const day = days.find(day => day.dateStr === dStr);
+        if (day) {
+          day.In = row.In;
+          day.Out = row.Out;
+        }
+      });
+      const movementData = days;
+
       return res.status(200).json({
         kpis: {
           totalProducts,
@@ -107,7 +148,8 @@ const dashboardController = {
           outOfStock: stockAlerts.outOfStock,
           lowStock: stockAlerts.lowStock
         },
-        recentActivity
+        recentActivity,
+        movementData
       });
     } catch (error) {
       next(error);

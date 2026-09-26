@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
+import ProductPicker from '../common/ProductPicker';
+import LocationPicker from '../common/LocationPicker';
 
 const AdjustmentForm = ({ onSubmit, onCancel }) => {
   const [product, setProduct] = useState('');
+  const [location, setLocation] = useState('');
   const [recordedQty, setRecordedQty] = useState(0);
   const [countedQty, setCountedQty] = useState(0);
 
@@ -9,14 +12,20 @@ const AdjustmentForm = ({ onSubmit, onCancel }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSubmit({ product, recordedQty, countedQty, delta });
+    onSubmit({ product, location, recordedQty, countedQty, delta });
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Product</label>
-        <input type="text" value={product} onChange={e => setProduct(e.target.value)} className="w-full p-2 border rounded" required />
+      <div className="flex gap-4">
+        <div className="flex-1">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Product</label>
+          <ProductPicker value={product} onChange={setProduct} />
+        </div>
+        <div className="flex-1">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+          <LocationPicker value={location} onChange={setLocation} />
+        </div>
       </div>
       <div className="flex gap-4">
         <div className="flex-1">

@@ -6,29 +6,36 @@ import { receiptService } from '../services/receiptService';
 const ReceiptDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  // Mock data for detail
-  const [receipt, setReceipt] = useState({
-    id,
-    supplier: 'Tech Corp',
-    date: '2026-09-25',
-    status: 'Draft',
-    lines: [
-      { product: 'Wireless Mouse', quantity: 50 },
-      { product: 'Keyboard', quantity: 20 },
-    ]
-  });
+  const [receipt, setReceipt] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  React.useEffect(() => {
+    const fetchReceipt = async () => {
+      try {
+        const data = await receiptService.getById(id);
+        setReceipt(data);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchReceipt();
+  }, [id]);
 
   const handleValidate = async () => {
     try {
-      // Mocking validation logic that would call the backend and increment stock
-      // await receiptService.validate(id);
+      await receiptService.validate(id);
       setReceipt({ ...receipt, status: 'Done' });
       alert('Receipt validated and stock updated!');
     } catch (error) {
       console.error(error);
-      alert('Failed to validate receipt');
+      alert(error.response?.data?.error || 'Failed to validate receipt');
     }
   };
+
+  if (loading) return <div className="p-6">Loading...</div>;
+  if (!receipt) return <div className="p-6">Receipt not found.</div>;
 
   return (
     <div className="p-6">
@@ -36,7 +43,7 @@ const ReceiptDetail = () => {
         <div>
           <button onClick={() => navigate('/receipts')} className="text-sm text-gray-500 hover:underline mb-2">← Back to Receipts</button>
           <h1 className="text-2xl font-bold flex items-center gap-3">
-            Receipt {receipt.id}
+            Receipt {receipt.receipt_number || receipt.id}
             <StatusBadge status={receipt.status} />
           </h1>
         </div>
@@ -51,11 +58,11 @@ const ReceiptDetail = () => {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <p className="text-sm text-gray-500">Supplier</p>
-            <p className="font-medium">{receipt.supplier}</p>
+            <p className="font-medium">{receipt.supplier_name || receipt.supplier}</p>
           </div>
           <div>
             <p className="text-sm text-gray-500">Date</p>
-            <p className="font-medium">{receipt.date}</p>
+            <p className="font-medium">{new Date(receipt.date || receipt.created_at).toLocaleDateString()}</p>
           </div>
         </div>
       </div>
@@ -70,9 +77,9 @@ const ReceiptDetail = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {receipt.lines.map((line, idx) => (
+            {receipt.lines?.map((line, idx) => (
               <tr key={idx}>
-                <td className="px-6 py-4 text-sm text-gray-900">{line.product}</td>
+                <td className="px-6 py-4 text-sm text-gray-900">{line.product_name || line.product}</td>
                 <td className="px-6 py-4 text-sm text-gray-900 text-right">{line.quantity}</td>
               </tr>
             ))}

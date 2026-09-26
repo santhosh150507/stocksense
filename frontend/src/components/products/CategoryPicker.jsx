@@ -1,8 +1,13 @@
-import React from 'react';
-
-const categories = ['Raw Materials', 'Furniture', 'Hardware', 'Finished Goods'];
+import React, { useState, useEffect } from 'react';
+import { categoryService } from '../../services/categoryService';
 
 const CategoryPicker = ({ value, onChange }) => {
+  const [categories, setCategories] = useState([]);
+
+  useEffect(() => {
+    categoryService.getAll().then(setCategories).catch(console.error);
+  }, []);
+
   return (
     <select 
       value={value} 
@@ -12,7 +17,7 @@ const CategoryPicker = ({ value, onChange }) => {
     >
       <option value="" disabled>Select a category</option>
       {categories.map(cat => (
-        <option key={cat} value={cat}>{cat}</option>
+        <option key={cat.id} value={cat.id}>{cat.name}</option>
       ))}
     </select>
   );

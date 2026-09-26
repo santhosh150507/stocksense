@@ -2,13 +2,10 @@ import React from 'react';
 import { MoreVertical, Edit2, Trash2, Eye } from 'lucide-react';
 
 const ProductTable = ({ products }) => {
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case 'In Stock': return <span className="px-2.5 py-1 rounded-md text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-100">In Stock</span>;
-      case 'Low Stock': return <span className="px-2.5 py-1 rounded-md text-xs font-medium bg-amber-50 text-amber-700 border border-amber-100">Low Stock</span>;
-      case 'Out of Stock': return <span className="px-2.5 py-1 rounded-md text-xs font-medium bg-red-50 text-red-700 border border-red-100">Out of Stock</span>;
-      default: return <span className="px-2.5 py-1 rounded-md text-xs font-medium bg-gray-50 text-gray-700 border border-gray-100">{status}</span>;
-    }
+  const getStatusBadge = (stock, reorderPoint) => {
+    if (stock <= 0) return <span className="px-2.5 py-1 rounded-md text-xs font-medium bg-red-50 text-red-700 border border-red-100">Out of Stock</span>;
+    if (stock <= reorderPoint) return <span className="px-2.5 py-1 rounded-md text-xs font-medium bg-amber-50 text-amber-700 border border-amber-100">Low Stock</span>;
+    return <span className="px-2.5 py-1 rounded-md text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-100">In Stock</span>;
   };
 
   return (
@@ -26,18 +23,21 @@ const ProductTable = ({ products }) => {
           </tr>
         </thead>
         <tbody className="bg-white divide-y divide-gray-100">
-          {products.map((product) => (
+          {products.length === 0 ? (
+            <tr><td colSpan="7" className="px-6 py-8 text-center text-sm text-gray-500 font-medium">No products yet.</td></tr>
+          ) : (
+            products.map((product) => (
             <tr key={product.id} className="hover:bg-gray-50/80 transition-colors group">
               <td className="px-6 py-4 whitespace-nowrap">
                 <div className="text-sm font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors cursor-pointer">{product.name}</div>
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.sku}</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{product.category}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{product.category_name || '-'}</td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium text-gray-900">
-                {product.stock} <span className="text-gray-400 text-xs ml-1 font-normal">{product.unit}</span>
+                {product.current_stock}
               </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-500">{product.locations}</td>
-              <td className="px-6 py-4 whitespace-nowrap text-center">{getStatusBadge(product.status)}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-500">-</td>
+              <td className="px-6 py-4 whitespace-nowrap text-center">{getStatusBadge(product.current_stock, product.reorder_point)}</td>
               <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                 <div className="flex justify-end gap-2">
                   <button className="text-gray-400 hover:text-indigo-600 transition-colors p-1"><Eye className="w-4 h-4" /></button>
@@ -46,7 +46,8 @@ const ProductTable = ({ products }) => {
                 </div>
               </td>
             </tr>
-          ))}
+            ))
+          )}
         </tbody>
       </table>
     </div>

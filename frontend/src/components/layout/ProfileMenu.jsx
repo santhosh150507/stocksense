@@ -35,7 +35,9 @@ const ProfileMenu = () => {
         </div>
         <div className="hidden md:flex flex-col items-start">
           <span className="text-sm font-semibold text-gray-700 leading-tight">{user?.name || 'Admin User'}</span>
-          <span className="text-xs text-gray-500 leading-tight">Warehouse Manager</span>
+          <span className="text-xs text-gray-500 leading-tight capitalize">
+            {user?.role ? user.role.replace('_', ' ') : 'Warehouse Manager'}
+          </span>
         </div>
         <ChevronDown className="w-4 h-4 text-gray-400 hidden md:block ml-1" />
       </button>

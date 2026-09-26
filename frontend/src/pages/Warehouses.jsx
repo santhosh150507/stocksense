@@ -1,26 +1,41 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Modal from '../components/common/Modal';
 import { Plus, MapPin, Package, Settings, ExternalLink, Building2 } from 'lucide-react';
 import toast from 'react-hot-toast';
-
-const mockWarehouses = [
-  { id: 1, name: 'Main Warehouse', location: 'New York, NY', capacity: 50000, currentStock: 34200, products: 450, active: true },
-  { id: 2, name: 'Production Floor', location: 'Newark, NJ', capacity: 20000, currentStock: 18500, products: 120, active: true },
-  { id: 3, name: 'Warehouse 2', location: 'Manhattan, NY', capacity: 5000, currentStock: 1200, products: 45, active: false },
-];
+import { warehouseService } from '../services/warehouseService';
 
 const Warehouses = () => {
-  const [warehouses, setWarehouses] = useState(mockWarehouses);
+  const [warehouses, setWarehouses] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({ name: '', location: '', capacity: 0 });
 
-  const handleCreate = (e) => {
+  useEffect(() => {
+    fetchWarehouses();
+  }, []);
+
+  const fetchWarehouses = async () => {
+    try {
+      const data = await warehouseService.getAll();
+      setWarehouses(data);
+    } catch (err) {
+      toast.error('Failed to fetch warehouses');
+    }
+  };
+
+  const handleCreate = async (e) => {
     e.preventDefault();
-    const newWarehouse = { ...formData, id: Date.now(), active: true, currentStock: 0, products: 0 };
-    setWarehouses([...warehouses, newWarehouse]);
-    setIsModalOpen(false);
-    setFormData({ name: '', location: '', capacity: 0 });
-    toast.success('Warehouse created successfully');
+    try {
+      await warehouseService.create({
+        name: formData.name,
+        location: formData.location
+      });
+      setIsModalOpen(false);
+      setFormData({ name: '', location: '', capacity: 0 });
+      toast.success('Warehouse created successfully');
+      fetchWarehouses();
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to create warehouse');
+    }
   };
 
   const toggleActive = (id) => {
@@ -79,14 +94,14 @@ const Warehouses = () => {
                 <div className="pt-3">
                   <div className="flex justify-between text-xs mb-1.5">
                     <span className="text-gray-500 font-medium">Capacity Usage</span>
-                    <span className="text-gray-700 font-bold">{Math.round((w.currentStock / w.capacity) * 100)}%</span>
+                    <span className="text-gray-700 font-bold">N/A</span>
                   </div>
                   <div className="w-full bg-gray-100 rounded-full h-2">
-                    <div className="bg-indigo-600 h-2 rounded-full transition-all duration-500" style={{ width: `${(w.currentStock / w.capacity) * 100}%` }}></div>
+                    <div className="bg-indigo-600 h-2 rounded-full transition-all duration-500" style={{ width: `0%` }}></div>
                   </div>
                   <div className="flex justify-between text-xs mt-1.5 text-gray-400">
-                    <span>{w.currentStock.toLocaleString()} units</span>
-                    <span>{w.capacity.toLocaleString()} max</span>
+                    <span>-</span>
+                    <span>-</span>
                   </div>
                 </div>
               </div>
