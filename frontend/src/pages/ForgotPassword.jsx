@@ -1,24 +1,37 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Box, ArrowLeft } from 'lucide-react';
+import { Box, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { authService } from '../services/authService';
 
 const ForgotPassword = () => {
   const [step, setStep] = useState(1);
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
-  const handleSendOtp = (e) => {
+  const handleSendOtp = async (e) => {
     e.preventDefault();
-    setStep(2);
-    toast.success('OTP sent to your email');
+    try {
+      await authService.requestOTP(email);
+      setStep(2);
+      toast.success('OTP sent to your email');
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to send OTP');
+    }
   };
 
-  const handleVerify = (e) => {
+  const handleVerify = async (e) => {
     e.preventDefault();
-    toast.success('Verified! Please login with new password.');
-    navigate('/login');
+    try {
+      await authService.resetPassword(email, otp, newPassword);
+      toast.success('Verified! Please login with new password.');
+      navigate('/login');
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Invalid OTP or failed to reset');
+    }
   };
 
   return (
@@ -77,6 +90,25 @@ const ForgotPassword = () => {
                     value={otp} onChange={e => setOtp(e.target.value)}
                     className="block w-full appearance-none rounded-lg border border-gray-300 px-3 py-2.5 text-center tracking-widest text-lg placeholder-gray-300 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 transition-colors"
                   />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">New Password</label>
+                <div className="mt-1 relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'} required
+                    value={newPassword} onChange={e => setNewPassword(e.target.value)}
+                    className="block w-full appearance-none rounded-lg border border-gray-300 px-3 py-2.5 pr-10 placeholder-gray-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm transition-colors"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 transition-colors"
+                    tabIndex={-1}
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
                 </div>
               </div>
 
